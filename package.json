@@ -1,12 +1,19 @@
 {
-  "name": "meu-projeto-habitica",
+  "name": "habiticagpt",
   "version": "1.0.0",
-  "description": "",
+  "description": "Create Habitica tasks using OpenAI's GPT API",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": [
+    "habitica",
+    "openai",
+    "gpt",
+    "api",
+    "tasks",
+    "ai"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {

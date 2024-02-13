@@ -6,68 +6,92 @@ const OpenAI = require("openai");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const TaskTypes = {
+  HABIT: "Habit",
+  DAILY: "Daily",
+  TODO: "Todo",
+  REWARD: "Reward",
+};
+
+const InputTypes = {
+  MANUAL: "Manually add Task",
+  FROM_FILE: "Add from File", // Placeholder, actual string will be generated dynamically
+};
+
 const filenameMap = {
-  Habit: "habits.txt",
-  Daily: "dailies.txt",
-  Todo: "todos.txt",
-  Reward: "rewards.txt",
+  [TaskTypes.HABIT]: "habits.txt",
+  [TaskTypes.DAILY]: "dailies.txt",
+  [TaskTypes.TODO]: "todos.txt",
+  [TaskTypes.REWARD]: "rewards.txt",
 };
 
 async function getUserInput() {
-  const taskTypeSelection = await Inquirer.prompt([
-    {
-      type: "list",
-      name: "taskType",
-      message: "What type of task would you like to create?",
-      choices: ["Habit", "Daily", "Todo", "Reward"],
-      default: "Todo",
-    },
-    {
-      type: "list",
-      name: "inputType",
-      message: "Would you like to manually add a task or read from a file?",
-      choices: (answers) => {
-        return [
-          "Manually add Task",
-          `Add all tasks from tasks/${filenameMap[answers.taskType]}`,
-        ];
+  try {
+    const taskTypeSelection = await Inquirer.prompt([
+      {
+        type: "list",
+        name: "taskType",
+        message: "What type of task would you like to create?",
+        choices: Object.values(TaskTypes),
+        default: TaskTypes.TODO,
       },
-    },
-  ]);
+      {
+        type: "list",
+        name: "inputType",
+        message: "Would you like to manually add a task or read from a file?",
+        choices: (answers) => [
+          InputTypes.MANUAL,
+          `Add all tasks from tasks/${filenameMap[answers.taskType]}`,
+        ],
+      },
+    ]);
 
-  if (taskTypeSelection.inputType === "Manually Add Task") {
-    return {
-      ...taskTypeSelection,
-      ...(await Inquirer.prompt([
+    InputTypes.FROM_FILE = `Add all tasks from tasks/${
+      filenameMap[taskTypeSelection.taskType]
+    }`;
+
+    if (taskTypeSelection.inputType === InputTypes.MANUAL) {
+      const manualTaskDetails = await Inquirer.prompt([
         {
           type: "input",
           name: "title",
           message: "Enter the title of your task:",
+          validate: (input) => input.trim() !== "" || "Title cannot be empty",
         },
         {
           type: "input",
           name: "priority",
           message:
             "Set the priority of your task (0.1 - low, 1 - medium, 1.5 - high, 2 - very high):",
-          when: (answers) => answers.taskType !== "Reward",
+          when: (answers) => answers.taskType !== TaskTypes.REWARD,
           default: "1", // Provide a default medium priority
+          validate: (input) =>
+            !isNaN(parseFloat(input)) || "Priority must be a number",
         },
         {
           type: "input",
           name: "rewardCost",
           message: "Set the cost of your reward:",
-          when: (answers) => answers.taskType === "Reward",
+          when: (answers) => answers.taskType === TaskTypes.REWARD,
           default: "10", // Set default rewardCost to 10
+          validate: (input) =>
+            !isNaN(parseFloat(input)) || "Reward cost must be a number",
         },
-      ])),
-    };
-  } else {
+      ]);
+      return { ...taskTypeSelection, ...manualTaskDetails };
+    }
+
     return {
       ...taskTypeSelection,
       filename: filenameMap[taskTypeSelection.taskType],
-      priority: taskTypeSelection.taskType !== "Reward" ? "1" : undefined, // Default priority for non-reward tasks
-      rewardCost: taskTypeSelection.taskType === "Reward" ? "10" : undefined, // Default cost for rewards
+      priority:
+        taskTypeSelection.taskType !== TaskTypes.REWARD ? "1" : undefined, // Default priority for non-reward tasks
+      rewardCost:
+        taskTypeSelection.taskType === TaskTypes.REWARD ? "10" : undefined, // Default cost for rewards
     };
+  } catch (error) {
+    console.error("Error getting user input:", error);
+    return null;
   }
 }
 
@@ -143,12 +167,26 @@ async function createTaskInHabitica(taskDetails) {
 }
 
 async function main() {
-  const taskDetails = await getUserInput();
-  if (taskDetails.inputType.includes("Add all")) {
-    await processTasksFromFile(taskDetails.filename, taskDetails);
-  } else {
+  try {
+    const taskDetails = await getUserInput();
+    if (!taskDetails) {
+      return;
+    }
+    if (taskDetails.inputType.startsWith("Add all")) {
+      await processTasksFromFile(taskDetails.filename, taskDetails);
+      return;
+    }
     await createTaskInHabitica(taskDetails);
+  } catch (error) {
+    console.error("An error occurred:", error);
   }
 }
 
 main();
+
+module.exports = {
+  getUserInput,
+  processTasksFromFile,
+  getEmoji,
+  createTaskInHabitica,
+};

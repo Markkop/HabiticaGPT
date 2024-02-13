@@ -6,11 +6,11 @@ Create habitica tasks with emojis using OpenAI's GPT.
 
 ## Usage
 
-- Change `tasks.txt` to your desired tasks
+- Change task txt files according to your needs (for mass creation)
 - Copy `.env.example` to `.env` and fill in your environment variables
-- Then run the following commands:
+- Then start the script and follow the instructions
 
 ```bash
 npm i
-node index.js
+npm start
 ```
